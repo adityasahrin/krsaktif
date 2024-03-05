@@ -1,75 +1,135 @@
-{{-- @dd($dataForFacultiesAndYears) --}}
-@extends('layouts.main')
+{{-- @dd($dataFakultas) --}}
+<!doctype html>
+<html lang="en">
 
-@section('container')
-    <div class="row justify-content-center">
-        <div class="col-md-12">
-            <h1 class="mt-3 fs-2 text-center">UIGM</h1>
-            <canvas class="my-3 w-100" width="900" height="350" id="myChart"></canvas>
-        </div>
-        <div class="col-md-12">
-            <h1 class="mt-3 fs-2 text-center">By Fakultas</h1>
-            <canvas class="my-3 w-100" width="900" height="350" id="myChart"></canvas>
-        </div>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KRS Aktif Mahasiswa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+
+<body>
+
+    <div class="container p-3">
         <div class="row">
-            <div class="col-md-4">
-                <ul>
-                    @foreach ($distinctYears as $year)
-                        <li>{{ $year }}</li>
-                    @endforeach
-                </ul>
+            <div class="col-md-6">
+                <h4>Data Mahasiswa KRS UIGM</h4>
+                <canvas id="chartJmlAll"></canvas>
             </div>
-            <div class="col-md-4">
-                <ul>
-                    @foreach ($distinctFaculties as $faculty)
-                        <li>{{ $faculty }}</li>
-                    @endforeach
-                </ul>
+            <div class="col-md-6">
+                <h4>Data Mahasiswa KRS Fakultas</h4>
+                <canvas id="chartFaculties"></canvas>
             </div>
-            <div class="col-md-4">
-                <ul>
-                    @foreach ($dataForFacultiesAndYears as $data)
-                        <li>{{ $data['FE'] }},</li>
-                    @endforeach
-                    {{-- {{ $feData = [] }}
-                    @foreach ($dataForFacultiesAndYears as $item)
-                        {{ $feData[] = $item['FE'] }}
-                    @endforeach --}}
-                    {{-- @foreach ($dataForFacultiesAndYears as $data)
-                        <li>{{ $data['FE'] }},</li>
-                    @endforeach --}}
-
-                </ul>
-            </div>
-
         </div>
 
-
-
-        {{-- <div class="col-md-12">
-            <h1 class="mt-3 fs-2 text-center">By Fakultas</h1>
-            <table class="table">
-                <thead>
+        <h4 class="mt-3">Data Mahasiswa Baru</h4>
+        <table class="table table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th scope="col">Fakultas</th>
+                    <th scope="col" class="text-center">2019</th>
+                    <th scope="col" class="text-center">2020</th>
+                    <th scope="col" class="text-center">2021</th>
+                    <th scope="col" class="text-center">2022</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($dataFakultas as $fakultas => $queryResult)
                     <tr>
-                        <th scope="col">NPM</th>
-                        <th scope="col">Nama</th>
-                        <th scope="col">Program Studi</th>
-                        <th scope="col">Fakutlas</th>
+                        <td>{{ $fakultas }}</td>
+                        @foreach ($queryResult as $result)
+                            <td class="text-center">{{ $result->JumlahMahasiswa }}</td>
+                        @endforeach
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach ($data as $d)
-                        <tr>
-                            <th>{{ $d->NPM }}</th>
-                            <td>{{ $d->Nama }}</td>
-                            <td>{{ $d->Program_Studi }}</td>
-                            <td>{{ $d->Fakultas }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            {{ $data->links() }}
-        </div> --}}
+                @endforeach
+            </tbody>
+        </table>
+        
     </div>
-    <div id="dataByFaculty" data-data="{{ json_encode($dataForFacultiesAndYears) }}"></div>
-@endsection
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous">
+    </script>
+
+    <script>
+        var ctxJmlAll = document.getElementById('chartJmlAll').getContext('2d');
+        var ctxFaculties = document.getElementById('chartFaculties').getContext('2d');
+
+        var years = @json($listTahun); // Ambil list tahun dari controller
+        var dataUIGM = @json($dataUIGM); // Ambil data dari controller
+        var faculties = ['FE', 'FT', 'FKIP', 'FIPB', 'FIlkom']; // Exclude 'JmlAll'
+
+        // Chart JmlAll
+        var myChartJmlAll = new Chart(ctxJmlAll, {
+            type: 'line', // Ganti tipe chart menjadi line
+            data: {
+                labels: years,
+                datasets: [{
+                    label: 'JmlAll',
+                    data: years.map(function(year) {
+                        return dataUIGM[year][0]['JmlAll'];
+                    }),
+                    borderColor: 'rgb(255, 99, 132)', // Warna garis
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Chart Fakultas
+        var facultiesColors = ['rgb(255, 0, 0)', 'rgb(0, 255, 0)', 'rgb(0, 0, 255)', 'rgb(255, 255, 0)',
+        'rgb(255, 0, 255)'];
+
+        var datasetsFaculties = faculties.map(function(faculty, index) {
+            return {
+                label: faculty,
+                data: years.map(function(year) {
+                    return dataUIGM[year][0][faculty];
+                }),
+                borderColor: facultiesColors[index],
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            };
+        });
+
+        var myChartFaculties = new Chart(ctxFaculties, {
+            type: 'line', // Ganti tipe chart menjadi line
+            data: {
+                labels: years,
+                datasets: datasetsFaculties
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+
+</html>
+
+
+</body>
+
+</html>
+
+
+</body>
+
+</html>

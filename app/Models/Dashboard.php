@@ -10,5 +10,5 @@ class Dashboard extends Model
 {
     use HasFactory;
 
-    protected $table = 'tbl_master_aktif_krs_uigm';
+    protected $table = 'tbl_master_krs';
 }

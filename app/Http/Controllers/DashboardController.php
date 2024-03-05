@@ -4,60 +4,55 @@ namespace App\Http\Controllers;
 
 use App\Models\Dashboard;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        return view('dashboard', [
-            'title' => 'UIGM',
-            'data' => Dashboard::paginate(7)
-        ]);
-    }
+        $listTahun = Dashboard::distinct()->pluck('Tahun');
+        $listFakultas = Dashboard::distinct()->pluck('Fakultas');
+        $dataUIGM = [];
+        $dataFakultas = [];
 
-    public function fetchDataForDashboard()
-    {
-        $distinctYears = Dashboard::distinct()->pluck('Tahun')->toArray();
-        $distinctFaculties = Dashboard::distinct()->pluck('Fakultas')->toArray();
+        foreach ($listTahun as $tahun) {
+            $data = Dashboard::select('Tahun', DB::raw('COUNT(DISTINCT NPM) AS JmlAll'), DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="Ekonomi" THEN NPM END) AS FE'), DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="Teknik" THEN NPM END) AS FT'), DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="FKIP" THEN NPM END) AS FKIP'), DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="FIPB" THEN NPM END) AS FIPB'), DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="ILKOM SAINS" THEN NPM END) AS FIlkom'))->where('Tahun', $tahun)->groupBy('Tahun')->get();
 
-        // Fetch data for each year
-        $dataByYear = [];
-        foreach ($distinctYears as $year) {
-            $dataByYear[$year] = Dashboard::select(
-                'Tahun',
-                DB::raw('COUNT(DISTINCT NPM) AS JmlAll'),
-                DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="Ekonomi" THEN NPM END) AS FE'),
-                DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="Teknik" THEN NPM END) AS FT'),
-                DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="FKIP" THEN NPM END) AS FKIP'),
-                DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="FIPB" THEN NPM END) AS FIPB'),
-                DB::raw('COUNT(DISTINCT CASE WHEN Fakultas="FASILKOM SAINS" THEN NPM END) AS FIlkom')
-            )
-                ->where('Tahun', $year)
-                ->groupBy('Tahun')
-                ->get()
-                ->toArray();
+            $dataUIGM[$tahun] = $data;
         }
 
-        $dataForFacultiesAndYears = Dashboard::selectRaw('LEFT(NPM, 4) AS TahunGanjil,
-            COUNT(DISTINCT CASE WHEN Fakultas = "Ekonomi" THEN NPM END) AS FE,
-            COUNT(DISTINCT CASE WHEN Fakultas = "FASILKOM SAINS" THEN NPM END) AS FIlkom,
-            COUNT(DISTINCT CASE WHEN Fakultas = "Teknik" THEN NPM END) AS FT,
-            COUNT(DISTINCT CASE WHEN Fakultas = "FIPB" THEN NPM END) AS FIPB,
-            COUNT(DISTINCT CASE WHEN Fakultas = "FKIP" THEN NPM END) AS FKIP')
-            ->whereBetween(DB::raw('LEFT(NPM, 4)'), ['2019', '2023'])
-            ->whereIn('Tahun', ['20191', '20231'])
-            ->whereIn('Fakultas', ['Ekonomi', 'FASILKOM SAINS', 'Teknik', 'FIPB', 'FKIP'])
-            ->groupBy('TahunGanjil')
-            ->get()
-            ->toArray();
+        $listFakultas = ['Ekonomi','ILKOM SAINS','FKIP','Teknik','FIPB'];
 
-        return view('dashboard', [
-            'title' => 'UIGM',
-            'distinctYears' => $distinctYears,
-            'distinctFaculties' => $distinctFaculties,
-            'dataByYear' => $dataByYear,
-            'dataForFacultiesAndYears' => $dataForFacultiesAndYears,
-        ]);
+$dataFakultas = [];
+
+foreach ($listFakultas as $fakultas) {
+    $queryFakultas = DB::table('tbl_master_krs')
+        ->selectRaw('
+            CASE 
+                WHEN Tahun = "20191" THEN "Data 2019"
+                WHEN Tahun = "20201" THEN "Data 2020"
+                WHEN Tahun = "20211" THEN "Data 2021"
+                WHEN Tahun = "20221" THEN "Data 2022"
+            END AS TahunData,
+            COUNT(DISTINCT NPM) AS JumlahMahasiswa
+        ')
+        ->where(function ($query) use ($fakultas) {
+            $query->where('Tahun', '20191')->whereRaw('LEFT(NPM, 4) = "2019"')->where('Fakultas', $fakultas);
+        })
+        ->orWhere(function ($query) use ($fakultas) {
+            $query->where('Tahun', '20201')->whereRaw('LEFT(NPM, 4) = "2020"')->where('Fakultas', $fakultas);
+        })
+        ->orWhere(function ($query) use ($fakultas) {
+            $query->where('Tahun', '20211')->whereRaw('LEFT(NPM, 4) = "2021"')->where('Fakultas', $fakultas);
+        })
+        ->orWhere(function ($query) use ($fakultas) {
+            $query->where('Tahun', '20221')->whereRaw('LEFT(NPM, 4) = "2022"')->where('Fakultas', $fakultas);
+        })
+        ->groupBy('TahunData')
+        ->get();
+
+    $dataFakultas[$fakultas] = $queryFakultas;
+}
+
+        return view('dashboard', compact('listTahun', 'dataUIGM', 'queryFakultas', 'dataFakultas'));
     }
 }
